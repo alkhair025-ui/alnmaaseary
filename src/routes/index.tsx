@@ -51,6 +51,12 @@ export const Route = createFileRoute("/")({
 
 const EXAMPLES = ["يوريا", "حديد تسليح", "قمح", "أسمنت", "زيت نخيل", "ألمنيوم"];
 
+const ROLES = [
+  { value: "exporter" as const, label: "مصدّر / بائع" },
+  { value: "importer" as const, label: "مستورد / مشترٍ" },
+  { value: "both" as const, label: "الاثنان معاً" },
+];
+
 function quoteMailto(company: CompanyLead, product: string) {
   const subject = `طلب عرض سعر - ${product || "سلعة"}`;
   const body = `السادة ${company.name} المحترمين،
@@ -77,6 +83,7 @@ function whatsappLink(company: CompanyLead, product: string) {
 function Index() {
   const [product, setProduct] = useState("");
   const [country, setCountry] = useState("");
+  const [role, setRole] = useState<"exporter" | "importer" | "both">("both");
   const [activityFilter, setActivityFilter] = useState<string>("الكل");
   const [nameFilter, setNameFilter] = useState("");
   const [searched, setSearched] = useState<{ product: string; country: string }>({
@@ -86,7 +93,8 @@ function Index() {
 
   const runSearch = useServerFn(searchCompanies);
   const mutation = useMutation({
-    mutationFn: (vars: { product: string; country: string }) => runSearch({ data: vars }),
+    mutationFn: (vars: { product: string; country: string; role: "exporter" | "importer" | "both" }) =>
+      runSearch({ data: vars }),
   });
 
   const companies = mutation.data?.companies ?? [];
@@ -113,7 +121,7 @@ function Index() {
     setNameFilter("");
     const region = country.trim() || "جميع الدول";
     setSearched({ product: product.trim(), country: region });
-    mutation.mutate({ product: product.trim(), country: region });
+    mutation.mutate({ product: product.trim(), country: region, role });
   };
 
   return (
@@ -168,6 +176,24 @@ function Index() {
           </form>
 
           <div className="mt-4 flex flex-wrap items-center gap-2">
+            <span className="text-xs text-muted-foreground">نوع الشركة:</span>
+            {ROLES.map((item) => (
+              <button
+                key={item.value}
+                type="button"
+                onClick={() => setRole(item.value)}
+                className={`rounded-full border px-3 py-1 text-xs transition-colors ${
+                  role === item.value
+                    ? "border-primary bg-primary text-primary-foreground"
+                    : "bg-secondary text-secondary-foreground hover:bg-accent hover:text-accent-foreground"
+                }`}
+              >
+                {item.label}
+              </button>
+            ))}
+          </div>
+
+          <div className="mt-3 flex flex-wrap items-center gap-2">
             <span className="text-xs text-muted-foreground">سلع شائعة:</span>
             {EXAMPLES.map((item) => (
               <button
