@@ -108,11 +108,12 @@ function Index() {
 
   const onSubmit = (event: React.FormEvent) => {
     event.preventDefault();
-    if (!product.trim() || !country.trim()) return;
+    if (!product.trim()) return;
     setActivityFilter("الكل");
     setNameFilter("");
-    setSearched({ product: product.trim(), country: country.trim() });
-    mutation.mutate({ product: product.trim(), country: country.trim() });
+    const region = country.trim() || "جميع الدول";
+    setSearched({ product: product.trim(), country: region });
+    mutation.mutate({ product: product.trim(), country: region });
   };
 
   return (
@@ -150,8 +151,7 @@ function Index() {
                 id="country"
                 value={country}
                 onChange={(e) => setCountry(e.target.value)}
-                placeholder="مثال: مصر، الخليج العربي، تركيا"
-                required
+                placeholder="مثال: مصر، الخليج العربي، تركيا (اختياري)"
               />
             </div>
             <Button type="submit" variant="hero" size="lg" disabled={mutation.isPending}>
