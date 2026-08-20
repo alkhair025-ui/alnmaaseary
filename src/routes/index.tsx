@@ -51,6 +51,12 @@ export const Route = createFileRoute("/")({
 
 const EXAMPLES = ["يوريا", "حديد تسليح", "قمح", "أسمنت", "زيت نخيل", "ألمنيوم"];
 
+const ROLES = [
+  { value: "exporter" as const, label: "مصدّر / بائع" },
+  { value: "importer" as const, label: "مستورد / مشترٍ" },
+  { value: "both" as const, label: "الاثنان معاً" },
+];
+
 function quoteMailto(company: CompanyLead, product: string) {
   const subject = `طلب عرض سعر - ${product || "سلعة"}`;
   const body = `السادة ${company.name} المحترمين،
