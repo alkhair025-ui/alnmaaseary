@@ -108,11 +108,12 @@ function Index() {
 
   const onSubmit = (event: React.FormEvent) => {
     event.preventDefault();
-    if (!product.trim() || !country.trim()) return;
+    if (!product.trim()) return;
     setActivityFilter("الكل");
     setNameFilter("");
-    setSearched({ product: product.trim(), country: country.trim() });
-    mutation.mutate({ product: product.trim(), country: country.trim() });
+    const region = country.trim() || "جميع الدول";
+    setSearched({ product: product.trim(), country: region });
+    mutation.mutate({ product: product.trim(), country: region });
   };
 
   return (
@@ -150,8 +151,7 @@ function Index() {
                 id="country"
                 value={country}
                 onChange={(e) => setCountry(e.target.value)}
-                placeholder="مثال: مصر، الخليج العربي، تركيا"
-                required
+                placeholder="مثال: مصر، الخليج العربي، تركيا (اختياري)"
               />
             </div>
             <Button type="submit" variant="hero" size="lg" disabled={mutation.isPending}>
@@ -324,6 +324,21 @@ function Index() {
               النتائج مستخرجة آلياً من المنصات التجارية العالمية ودلائل غرف التجارة؛ يُنصح بالتحقق من
               البيانات قبل التعاقد.
             </p>
+          </section>
+        )}
+
+        {mutation.isPending && (
+          <section className="mt-6 rounded-xl border bg-surface p-8 text-center">
+            <Loader2 className="mx-auto size-8 animate-spin text-primary" />
+            <p className="mt-3 text-sm font-semibold">جارٍ التنقيب عن الشركات...</p>
+            <p className="mt-1 text-xs text-muted-foreground">
+              قد تستغرق العملية من 20 إلى 40 ثانية، يرجى عدم إغلاق الصفحة.
+            </p>
+            <div className="mt-5 space-y-2">
+              {[0, 1, 2, 3].map((i) => (
+                <div key={i} className="h-10 animate-pulse rounded-md bg-muted" />
+              ))}
+            </div>
           </section>
         )}
 
