@@ -327,6 +327,21 @@ function Index() {
           </section>
         )}
 
+        {mutation.isPending && (
+          <section className="mt-6 rounded-xl border bg-surface p-8 text-center">
+            <Loader2 className="mx-auto size-8 animate-spin text-primary" />
+            <p className="mt-3 text-sm font-semibold">جارٍ التنقيب عن الشركات...</p>
+            <p className="mt-1 text-xs text-muted-foreground">
+              قد تستغرق العملية من 20 إلى 40 ثانية، يرجى عدم إغلاق الصفحة.
+            </p>
+            <div className="mt-5 space-y-2">
+              {[0, 1, 2, 3].map((i) => (
+                <div key={i} className="h-10 animate-pulse rounded-md bg-muted" />
+              ))}
+            </div>
+          </section>
+        )}
+
         {!mutation.isPending && companies.length === 0 && !mutation.data?.error && (
           <section className="mt-10 rounded-xl border border-dashed bg-surface p-10 text-center">
             <Search className="mx-auto size-8 text-muted-foreground" />
