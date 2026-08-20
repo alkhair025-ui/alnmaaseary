@@ -122,7 +122,7 @@ export const searchCompanies = createServerFn({ method: "POST" })
       .map((item) => ({
         name: clean(item.name),
         activity: clean(item.activity) || "غير محدد",
-        website: clean(item.website).replace(/^https?:\/\//, ""),
+        website: clean(item.website).replace(/^https?:\/\//, "").replace(/\/+$/, ""),
         city: clean(item.city),
         phone: clean(item.phone).replace(/[^\d]/g, ""),
         email: clean(item.email),
