@@ -1,10 +1,18 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 
+const attachmentSchema = z.object({
+  name: z.string().max(200).default(""),
+  mime: z.string().max(120),
+  dataUrl: z.string().max(8_000_000),
+});
+
 const inputSchema = z.object({
   product: z.string().min(1).max(120),
   country: z.string().min(1).max(120),
   role: z.enum(["exporter", "importer", "both"]).default("both"),
+  specs: z.string().max(4000).optional().default(""),
+  attachments: z.array(attachmentSchema).max(4).optional().default([]),
 });
 
 export type CompanyLead = {
