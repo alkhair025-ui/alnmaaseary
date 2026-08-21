@@ -100,8 +100,33 @@ export const searchCompanies = createServerFn({ method: "POST" })
     }
 
     const roleText = ROLE_TEXT[data.role] ?? ROLE_TEXT["both"];
+    const specsText = (data.specs ?? "").trim();
+    const attachments = data.attachments ?? [];
+
+    const attachmentBlocks = attachments.flatMap((file) => {
+      if (file.mime.startsWith("image/")) {
+        return [{ type: "image_url", image_url: { url: file.dataUrl } }];
+      }
+      if (file.mime === "application/pdf") {
+        return [
+          {
+            type: "file",
+            file: { filename: file.name || "spec.pdf", file_data: file.dataUrl },
+          },
+        ];
+      }
+      return [];
+    });
 
     const runPass = async (focus: string) => {
+      const textPrompt = `السلعة: ${data.product}\nالدولة أو المنطقة: ${data.country}\nنوع الشركات المطلوبة: ${roleText}${
+        specsText ? `\nالمواصفات والتحاليل المقدمة من المستخدم:\n${specsText}` : ""
+      }${
+        attachmentBlocks.length > 0
+          ? "\nمرفقات: صور/ملفات تحاليل ومواصفات المنتج، حللها واستخرج الدرجة التجارية والمواصفات الدقيقة."
+          : ""
+      }\n${focus}\nاستخرج الشركات التجارية والموزعين فقط (بدون مصانع) العاملين في هذه السلعة بهذه المواصفة تحديداً داخل هذه المنطقة.`;
+
       const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
         method: "POST",
         headers: {
