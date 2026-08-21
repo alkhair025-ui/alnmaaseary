@@ -158,7 +158,13 @@ function Index() {
     setNameFilter("");
     const region = country.trim() || "جميع الدول";
     setSearched({ product: product.trim(), country: region });
-    mutation.mutate({ product: product.trim(), country: region, role });
+    mutation.mutate({
+      product: product.trim(),
+      country: region,
+      role,
+      specs: specs.trim(),
+      attachments,
+    });
   };
 
   return (
