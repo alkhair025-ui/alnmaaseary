@@ -83,9 +83,23 @@ function whatsappLink(company: CompanyLead, product: string) {
   return `https://wa.me/${company.phone}?text=${encodeURIComponent(text)}`;
 }
 
+type Attachment = { name: string; mime: string; dataUrl: string };
+
+function readAsDataUrl(file: File) {
+  return new Promise<string>((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result));
+    reader.onerror = () => reject(reader.error);
+    reader.readAsDataURL(file);
+  });
+}
+
 function Index() {
   const [product, setProduct] = useState("");
   const [country, setCountry] = useState("");
+  const [specs, setSpecs] = useState("");
+  const [attachments, setAttachments] = useState<Attachment[]>([]);
+  const [fileError, setFileError] = useState("");
   const [role, setRole] = useState<"exporter" | "importer" | "both">("both");
   const [activityFilter, setActivityFilter] = useState<string>("الكل");
   const [nameFilter, setNameFilter] = useState("");
