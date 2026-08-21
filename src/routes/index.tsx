@@ -110,9 +110,29 @@ function Index() {
 
   const runSearch = useServerFn(searchCompanies);
   const mutation = useMutation({
-    mutationFn: (vars: { product: string; country: string; role: "exporter" | "importer" | "both" }) =>
-      runSearch({ data: vars }),
+    mutationFn: (vars: {
+      product: string;
+      country: string;
+      role: "exporter" | "importer" | "both";
+      specs: string;
+      attachments: Attachment[];
+    }) => runSearch({ data: vars }),
   });
+
+  const onFiles = async (files: FileList | null) => {
+    if (!files || files.length === 0) return;
+    setFileError("");
+    const allowed = Array.from(files).filter(
+      (f) => f.type.startsWith("image/") || f.type === "application/pdf",
+    );
+    const tooBig = allowed.filter((f) => f.size > 4 * 1024 * 1024);
+    if (tooBig.length > 0) setFileError("بعض الملفات تجاوزت 4 ميغابايت ولم تُضف.");
+    const usable = allowed.filter((f) => f.size <= 4 * 1024 * 1024);
+    const loaded = await Promise.all(
+      usable.map(async (f) => ({ name: f.name, mime: f.type, dataUrl: await readAsDataUrl(f) })),
+    );
+    setAttachments((prev) => [...prev, ...loaded].slice(0, 4));
+  };
 
   const companies = mutation.data?.companies ?? [];
 
