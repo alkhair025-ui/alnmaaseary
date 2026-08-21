@@ -139,7 +139,7 @@ export const searchCompanies = createServerFn({ method: "POST" })
             { role: "system", content: SYSTEM_PROMPT },
             {
               role: "user",
-              content: `السلعة: ${data.product}\nالدولة أو المنطقة: ${data.country}\nنوع الشركات المطلوبة: ${roleText}\n${focus}\nاستخرج الشركات التجارية والموزعين فقط (بدون مصانع) العاملين في هذه السلعة داخل هذه المنطقة.`,
+              content: [{ type: "text", text: textPrompt }, ...attachmentBlocks],
             },
           ],
           tools: TOOLS,
