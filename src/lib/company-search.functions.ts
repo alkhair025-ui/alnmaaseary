@@ -103,7 +103,7 @@ export const searchCompanies = createServerFn({ method: "POST" })
     const specsText = (data.specs ?? "").trim();
     const attachments = data.attachments ?? [];
 
-    const attachmentBlocks = attachments.flatMap((file) => {
+    const attachmentBlocks = attachments.flatMap((file): Array<Record<string, unknown>> => {
       if (file.mime.startsWith("image/")) {
         return [{ type: "image_url", image_url: { url: file.dataUrl } }];
       }
