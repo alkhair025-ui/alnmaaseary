@@ -12,10 +12,13 @@ import {
   Loader2,
   Filter,
   Database,
+  Paperclip,
+  X,
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -80,9 +83,23 @@ function whatsappLink(company: CompanyLead, product: string) {
   return `https://wa.me/${company.phone}?text=${encodeURIComponent(text)}`;
 }
 
+type Attachment = { name: string; mime: string; dataUrl: string };
+
+function readAsDataUrl(file: File) {
+  return new Promise<string>((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result));
+    reader.onerror = () => reject(reader.error);
+    reader.readAsDataURL(file);
+  });
+}
+
 function Index() {
   const [product, setProduct] = useState("");
   const [country, setCountry] = useState("");
+  const [specs, setSpecs] = useState("");
+  const [attachments, setAttachments] = useState<Attachment[]>([]);
+  const [fileError, setFileError] = useState("");
   const [role, setRole] = useState<"exporter" | "importer" | "both">("both");
   const [activityFilter, setActivityFilter] = useState<string>("الكل");
   const [nameFilter, setNameFilter] = useState("");
@@ -93,9 +110,29 @@ function Index() {
 
   const runSearch = useServerFn(searchCompanies);
   const mutation = useMutation({
-    mutationFn: (vars: { product: string; country: string; role: "exporter" | "importer" | "both" }) =>
-      runSearch({ data: vars }),
+    mutationFn: (vars: {
+      product: string;
+      country: string;
+      role: "exporter" | "importer" | "both";
+      specs: string;
+      attachments: Attachment[];
+    }) => runSearch({ data: vars }),
   });
+
+  const onFiles = async (files: FileList | null) => {
+    if (!files || files.length === 0) return;
+    setFileError("");
+    const allowed = Array.from(files).filter(
+      (f) => f.type.startsWith("image/") || f.type === "application/pdf",
+    );
+    const tooBig = allowed.filter((f) => f.size > 4 * 1024 * 1024);
+    if (tooBig.length > 0) setFileError("بعض الملفات تجاوزت 4 ميغابايت ولم تُضف.");
+    const usable = allowed.filter((f) => f.size <= 4 * 1024 * 1024);
+    const loaded = await Promise.all(
+      usable.map(async (f) => ({ name: f.name, mime: f.type, dataUrl: await readAsDataUrl(f) })),
+    );
+    setAttachments((prev) => [...prev, ...loaded].slice(0, 4));
+  };
 
   const companies = mutation.data?.companies ?? [];
 
@@ -121,7 +158,13 @@ function Index() {
     setNameFilter("");
     const region = country.trim() || "جميع الدول";
     setSearched({ product: product.trim(), country: region });
-    mutation.mutate({ product: product.trim(), country: region, role });
+    mutation.mutate({
+      product: product.trim(),
+      country: region,
+      role,
+      specs: specs.trim(),
+      attachments,
+    });
   };
 
   return (
@@ -173,7 +216,75 @@ function Index() {
                 </>
               )}
             </Button>
+
+            <div className="space-y-2 md:col-span-3">
+              <Label htmlFor="specs">المواصفات والتحاليل الفنية (اختياري)</Label>
+              <Textarea
+                id="specs"
+                value={specs}
+                onChange={(e) => setSpecs(e.target.value)}
+                rows={4}
+                placeholder={
+                  "الصق مواصفات المنتج أو نتائج التحليل المخبري لزيادة دقة النتائج.\nمثال: كبريت (Sulfur) نقاء ≥ 99.5%، رطوبة ≤ 0.2%، حموضة ≤ 0.01%، شكل حبيبي Granular."
+                }
+              />
+              <div className="flex flex-wrap items-center gap-2">
+                <input
+                  id="specs-files"
+                  type="file"
+                  className="hidden"
+                  multiple
+                  accept="image/*,application/pdf"
+                  onChange={(e) => {
+                    void onFiles(e.target.files);
+                    e.target.value = "";
+                  }}
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => document.getElementById("specs-files")?.click()}
+                >
+                  <Paperclip /> إرفاق صور أو ملفات التحليل
+                </Button>
+                <span className="text-[11px] text-muted-foreground">
+                  حتى 4 ملفات (صور أو PDF)، بحجم أقصاه 4 ميغابايت للملف.
+                </span>
+              </div>
+              {fileError && <p className="text-xs text-destructive">{fileError}</p>}
+              {attachments.length > 0 && (
+                <div className="flex flex-wrap gap-2">
+                  {attachments.map((file, index) => (
+                    <span
+                      key={`${file.name}-${index}`}
+                      className="flex items-center gap-2 rounded-full border bg-secondary px-3 py-1 text-xs text-secondary-foreground"
+                    >
+                      {file.mime.startsWith("image/") && (
+                        <img
+                          src={file.dataUrl}
+                          alt={`مرفق ${file.name}`}
+                          className="size-5 rounded object-cover"
+                        />
+                      )}
+                      <span className="max-w-40 truncate">{file.name || "ملف"}</span>
+                      <button
+                        type="button"
+                        aria-label="إزالة المرفق"
+                        onClick={() =>
+                          setAttachments((prev) => prev.filter((_, i) => i !== index))
+                        }
+                        className="text-muted-foreground hover:text-destructive"
+                      >
+                        <X className="size-3" />
+                      </button>
+                    </span>
+                  ))}
+                </div>
+              )}
+            </div>
           </form>
+
 
           <div className="mt-4 flex flex-wrap items-center gap-2">
             <span className="text-xs text-muted-foreground">نوع الشركة:</span>

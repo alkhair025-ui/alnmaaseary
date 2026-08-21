@@ -1,10 +1,18 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 
+const attachmentSchema = z.object({
+  name: z.string().max(200).default(""),
+  mime: z.string().max(120),
+  dataUrl: z.string().max(8_000_000),
+});
+
 const inputSchema = z.object({
   product: z.string().min(1).max(120),
   country: z.string().min(1).max(120),
   role: z.enum(["exporter", "importer", "both"]).default("both"),
+  specs: z.string().max(4000).optional().default(""),
+  attachments: z.array(attachmentSchema).max(4).optional().default([]),
 });
 
 export type CompanyLead = {
@@ -37,7 +45,9 @@ const SYSTEM_PROMPT = `أنت محلل استخبارات تجارية (B2B) خ�
 - أرقام الهواتف بصيغة دولية بدون رموز (مثال: 971501234567) أو فارغة إن لم تُعرف.
 - النشاط التجاري بالعربية وبكلمتين إلى أربع كلمات (مثال: "تاجر جملة"، "موزع معتمد"، "وكيل استيراد"، "شركة تصدير"، "بيت تجاري"). ممنوع استخدام كلمة "مصنع" أو "منتج".
 - اذكر المصدر/المنصة التي تُدرج فيها الشركة عادة.
-- أعد أكبر عدد ممكن من الشركات (20 شركة على الأقل إن أمكن) دون تكرار.`;
+- أعد أكبر عدد ممكن من الشركات (20 شركة على الأقل إن أمكن) دون تكرار.
+- إذا زوّدك المستخدم بمواصفات فنية أو تحاليل مخبرية أو صور/ملفات للمنتج (مثل نسبة النقاء، الشكل، الدرجة التجارية، الاستخدامات، الرقم الجمركي HS Code)، فاقرأها بدقة واستنتج منها الدرجة التجارية الصحيحة للسلعة، ثم اختر فقط الشركات التي تتاجر فعلياً بهذه الدرجة/المواصفة تحديداً وليس بالسلعة بشكل عام.
+- ابدأ داخلياً بتحديد الـ HS Code الأنسب للمواصفة قبل اختيار الشركات، وفضّل الشركات المطابقة له.`;
 
 const PASSES = [
   "ركّز على المصادر الرسمية والمجانية: Trade Map (ITC)، WITS (البنك الدولي)، سجلات الشركات الحكومية، غرف التجارة والصناعة الوطنية، اتحادات المصدرين والمستوردين.",
@@ -90,8 +100,33 @@ export const searchCompanies = createServerFn({ method: "POST" })
     }
 
     const roleText = ROLE_TEXT[data.role] ?? ROLE_TEXT["both"];
+    const specsText = (data.specs ?? "").trim();
+    const attachments = data.attachments ?? [];
+
+    const attachmentBlocks = attachments.flatMap((file): Array<Record<string, unknown>> => {
+      if (file.mime.startsWith("image/")) {
+        return [{ type: "image_url", image_url: { url: file.dataUrl } }];
+      }
+      if (file.mime === "application/pdf") {
+        return [
+          {
+            type: "file",
+            file: { filename: file.name || "spec.pdf", file_data: file.dataUrl },
+          },
+        ];
+      }
+      return [];
+    });
 
     const runPass = async (focus: string) => {
+      const textPrompt = `السلعة: ${data.product}\nالدولة أو المنطقة: ${data.country}\nنوع الشركات المطلوبة: ${roleText}${
+        specsText ? `\nالمواصفات والتحاليل المقدمة من المستخدم:\n${specsText}` : ""
+      }${
+        attachmentBlocks.length > 0
+          ? "\nمرفقات: صور/ملفات تحاليل ومواصفات المنتج، حللها واستخرج الدرجة التجارية والمواصفات الدقيقة."
+          : ""
+      }\n${focus}\nاستخرج الشركات التجارية والموزعين فقط (بدون مصانع) العاملين في هذه السلعة بهذه المواصفة تحديداً داخل هذه المنطقة.`;
+
       const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
         method: "POST",
         headers: {
@@ -104,7 +139,7 @@ export const searchCompanies = createServerFn({ method: "POST" })
             { role: "system", content: SYSTEM_PROMPT },
             {
               role: "user",
-              content: `السلعة: ${data.product}\nالدولة أو المنطقة: ${data.country}\nنوع الشركات المطلوبة: ${roleText}\n${focus}\nاستخرج الشركات التجارية والموزعين فقط (بدون مصانع) العاملين في هذه السلعة داخل هذه المنطقة.`,
+              content: [{ type: "text", text: textPrompt }, ...attachmentBlocks],
             },
           ],
           tools: TOOLS,
