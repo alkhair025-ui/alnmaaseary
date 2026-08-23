@@ -35,7 +35,12 @@ export const searchCompanies = createServerFn({ method: "POST" })
     try {
       // إرسال طلب البحث إلى خادم FastAPI
       const response = await fetch(
-        `http://localhost:8000/api/search?q=${encodeURIComponent(data.product)}&country=${encodeURIComponent(data.country)}`
+        `http://localhost:8000/api/search?q=${encodeURIComponent(data.product)}&country=${encodeURIComponent(data.country)}`,
+        {
+          headers: {
+            "ngrok-skip-browser-warning": "true",
+          },
+        }
       );
 
       if (!response.ok) {
